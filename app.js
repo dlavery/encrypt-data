@@ -35,12 +35,13 @@ const aes256gcm = (key) => {
 };
 
 const KEY = new Buffer.alloc(32, crypto.randomBytes(32), 'utf8');
-const IV = new Buffer.alloc(16, 'test init vector', 'utf8')
+const IV = new Buffer.alloc(16, '0123456789abcdef', 'utf8')
 const aesCipher = aes256gcm(KEY, IV);
 
 const [encrypted, authTag] = aesCipher.encrypt('goodbye, world', IV);
 console.log(encrypted); // 'hello, world' encrypted
 //console.log(authTag);
+//console.log(IV)
 
 const decrypted = aesCipher.decrypt(encrypted, IV, authTag);
 console.log(decrypted); // 'hello, world'
