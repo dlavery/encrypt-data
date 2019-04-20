@@ -3,28 +3,23 @@ const crypto = require('crypto');
 const AWS = require('aws-sdk')
 
 // Demo implementation of using `aes-256-gcm` with node.js's `crypto` lib.
-const aes256gcm = (key) => {
+const aes256gcm = (key, iv) => {
   const ALGO = 'aes-256-gcm';
 
   // encrypt returns base64-encoded ciphertext
-  const encrypt = (str, iv) => {
-    // Hint: the `iv` should be unique (but not necessarily random).
-    // `randomBytes` here are (relatively) slow but convenient for
-    // demonstration.
-    //const iv = new Buffer.alloc(16, crypto.randomBytes(16), 'utf8');
+  const encrypt = (str) => {
     const cipher = crypto.createCipheriv(ALGO, key, iv);
-
-    // Hint: Larger inputs (it's GCM, after all!) should use the stream API
     let enc = cipher.update(str, 'utf8', 'base64');
     enc += cipher.final('base64');
-    return [enc, cipher.getAuthTag()];
+    return cipher.getAuthTag().toString('base64')+enc;
   };
 
   // decrypt decodes base64-encoded ciphertext into a utf8-encoded string
-  const decrypt = (enc, iv, authTag) => {
+  const decrypt = (enc) => {
+    authTag = Buffer.from(enc.substring(0,23), 'base64');
     const decipher = crypto.createDecipheriv(ALGO, key, iv);
     decipher.setAuthTag(authTag);
-    let str = decipher.update(enc, 'base64', 'utf8');
+    let str = decipher.update(enc.substring(24), 'base64', 'utf8');
     str += decipher.final('utf8');
     return str;
   };
@@ -47,26 +42,15 @@ kms.generateDataKey(params, function(err, data) {
     console.log(err, err.stack); // an error occurred
   }
   else {
-    //const KEY = new Buffer.alloc(32, crypto.randomBytes(32), 'utf8');
     const dataKey = data.Plaintext.toString('utf8');
-    console.log(dataKey);
     const KEY = new Buffer.alloc(32, dataKey, 'utf8');
     const IV = new Buffer.alloc(16, '0123456789abcdef', 'utf8')
     const aesCipher = aes256gcm(KEY, IV);
 
-    const [encrypted, authTag] = aesCipher.encrypt('goodbye, world', IV);
+    const encrypted = aesCipher.encrypt('goodbye, cruel world');
     console.log(encrypted); // 'hello, world' encrypted
-    //console.log(authTag);
-    //console.log(IV)
 
-    const decrypted = aesCipher.decrypt(encrypted, IV, authTag);
+    const decrypted = aesCipher.decrypt(encrypted);
     console.log(decrypted); // 'hello, world'
-    /*
-    data = {
-      CiphertextBlob: <Binary String>, // The encrypted data key.
-      KeyId: "arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab", // The ARN of the CMK that was used to encrypt the data key.
-      Plaintext: <Binary String>// The unencrypted (plaintext) data key.
-     }
-     */
    }
  });
