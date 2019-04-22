@@ -21,7 +21,7 @@ const aes256gcm = (key, iv, cipherKey) => {
   // decrypt decodes base64-encoded ciphertext into a utf8-encoded string
   const decrypt = (enc) => {
     authTag = Buffer.from(enc.substring(0, 23), 'base64');
-    kms.decrypt({CiphertextBlob: cipherKey}, function(err, data) {
+    return kms.decrypt({CiphertextBlob: cipherKey}, function(err, data) {
       if (err) console.log(err, err.stack); // an error occurred
       else {
         console.log(data.Plaintext);
@@ -29,6 +29,7 @@ const aes256gcm = (key, iv, cipherKey) => {
         decipher.setAuthTag(authTag);
         let buf = decipher.update(enc.substring(24), 'base64');
         buf += decipher.final();
+        console.log(buf);
         return buf;
       }
     });
