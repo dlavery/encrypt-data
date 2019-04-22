@@ -15,30 +15,23 @@ const aes256gcm = (key, iv, cipherKey) => {
     const cipher = crypto.createCipheriv(ALGO, key, iv);
     let enc = cipher.update(buf, null, 'base64');
     enc += cipher.final('base64');
-    return cipherKey.toString('base64') + cipher.getAuthTag().toString('base64') + enc;
+    return cipher.getAuthTag().toString('base64') + enc;
   };
 
   // decrypt decodes base64-encoded ciphertext into a utf8-encoded string
   const decrypt = (enc) => {
-    decryptKey = Buffer.from(enc.substring(0, 247), 'base64');
-    authTag = Buffer.from(enc.substring(248, 271), 'base64');
-    kms.decrypt({CiphertextBlob: decryptKey}, function(err, data) {
+    authTag = Buffer.from(enc.substring(0, 23), 'base64');
+    kms.decrypt({CiphertextBlob: cipherKey}, function(err, data) {
       if (err) console.log(err, err.stack); // an error occurred
       else {
+        console.log(data.Plaintext);
         const decipher = crypto.createDecipheriv(ALGO, data.Plaintext, iv);
         decipher.setAuthTag(authTag);
-        let buf = decipher.update(enc.substring(272), 'base64');
+        let buf = decipher.update(enc.substring(24), 'base64');
         buf += decipher.final();
         return buf;
       }
-      //console.log(data);           // successful response
-       /*
-       data = {
-        KeyId: "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab", // The Amazon Resource Name (ARN) of the CMK that was used to decrypt the data.
-        Plaintext: <Binary String>// The decrypted (plaintext) data.
-       }
-       */
-     });
+    });
   };
 
   return {
@@ -60,6 +53,7 @@ kms.generateDataKey(params, function(err, data) {
   if (err) {
     console.log(err, err.stack); // an error occurred
   } else {
+    console.log(data.Plaintext);
     const dataKey = data.Plaintext.toString('utf8');
     const KEY = new Buffer.alloc(32, dataKey, 'utf8');
     const IV = new Buffer.alloc(16, '0123456789abcdef', 'utf8')
