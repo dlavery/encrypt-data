@@ -7,7 +7,7 @@ const app = express();
 const port = 8080;
 
 // Implementation of `aes-256-gcm` with node.js's `crypto` lib.
-const aes256gcm = (key, iv, cipherKey) => {
+const aes256gcm = (key, iv) => {
   const ALGO = 'aes-256-gcm';
 
   // encrypt returns base64-encoded ciphertext
@@ -19,20 +19,14 @@ const aes256gcm = (key, iv, cipherKey) => {
   };
 
   // decrypt decodes base64-encoded ciphertext into a utf8-encoded string
-  const decrypt = (enc) => {
+  const decrypt = (enc, cipherKey) => {
     authTag = Buffer.from(enc.substring(0, 23), 'base64');
-    return kms.decrypt({CiphertextBlob: cipherKey}, function(err, data) {
-      if (err) console.log(err, err.stack); // an error occurred
-      else {
-        console.log(data.Plaintext);
-        const decipher = crypto.createDecipheriv(ALGO, data.Plaintext, iv);
-        decipher.setAuthTag(authTag);
-        let buf = decipher.update(enc.substring(24), 'base64');
-        buf += decipher.final();
-        console.log(buf);
-        return buf;
-      }
-    });
+    const decipher = crypto.createDecipheriv(ALGO, key, iv);
+    decipher.setAuthTag(authTag);
+    let buf = decipher.update(enc.substring(24), 'base64');
+    buf += decipher.final();
+    console.log(buf);
+    return buf;
   };
 
   return {
@@ -55,10 +49,11 @@ kms.generateDataKey(params, function(err, data) {
     console.log(err, err.stack); // an error occurred
   } else {
     console.log(data.Plaintext);
+    const cipherKey = data.CiphertextBlob.toString('base64');
     const dataKey = data.Plaintext.toString('utf8');
     const KEY = new Buffer.alloc(32, dataKey, 'utf8');
     const IV = new Buffer.alloc(16, '0123456789abcdef', 'utf8')
-    const aesCipher = aes256gcm(KEY, IV, data.CiphertextBlob);
+    const aesCipher = aes256gcm(KEY, IV);
 
     //const encrypted = aesCipher.encrypt(Buffer.from('goodbye, cruel world', 'utf8'));
     //console.log(encrypted); // 'hello, world' encrypted
@@ -68,22 +63,26 @@ kms.generateDataKey(params, function(err, data) {
 
     app.use('/encryptdata', express.json());
     app.post('/encryptdata', function (req, res) {
-      data = {};
-      for (var attr in req.body)
+      data = {encKey: cipherKey};
+      for (var attr in req.body) {
         if (req.body.hasOwnProperty(attr)) {
           data[attr] = aesCipher.encrypt(Buffer.from(req.body[attr], 'utf8'));
         }
+      }
       res.send(JSON.stringify(data));
     });
 
     app.use('/decryptdata', express.json());
     app.post('/decryptdata', function (req, res) {
-      data = {};
-      for (var attr in req.body)
-        if (req.body.hasOwnProperty(attr)) {
-          data[attr] = aesCipher.decrypt(req.body[attr]).toString('utf8');
+      kms.decrypt({CiphertextBlob: Buffer.from(req.body.encKey, 'base64')}, function(err, data) {
+        data = {};
+        for (var attr in req.body) {
+          if (req.body.hasOwnProperty(attr)) {
+            data[attr] = aesCipher.decrypt(req.body[attr], data.Plaintext);
+          }
         }
-      res.send(JSON.stringify(data));
+        res.send(JSON.stringify(data));
+      });
     });
 
     app.listen(port, () => console.log(`Encryption Service running on port ${port}.`));
