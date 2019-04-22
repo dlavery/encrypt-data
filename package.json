@@ -1,0 +1,27 @@
+{
+  "name": "encrypt-data",
+  "version": "1.0.0",
+  "description": "micro service to encrypt data",
+  "main": "app.js",
+  "dependencies": {
+    "aws-sdk": "^2.439.0",
+    "express": "^4.16.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dlavery/encrypt-data.git"
+  },
+  "keywords": [
+    "encryption"
+  ],
+  "author": "David Lavery",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dlavery/encrypt-data/issues"
+  },
+  "homepage": "https://github.com/dlavery/encrypt-data#readme"
+}
