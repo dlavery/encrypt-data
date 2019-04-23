@@ -21,7 +21,7 @@ const aes256gcm = (key, iv) => {
   // decrypt decodes base64-encoded ciphertext into a utf8-encoded string
   const decrypt = (enc, cipherKey) => {
     authTag = Buffer.from(enc.substring(0, 23), 'base64');
-    const decipher = crypto.createDecipheriv(ALGO, key, iv);
+    const decipher = crypto.createDecipheriv(ALGO, cipherKey, iv);
     decipher.setAuthTag(authTag);
     let buf = decipher.update(enc.substring(24), 'base64');
     buf += decipher.final();
@@ -51,37 +51,44 @@ kms.generateDataKey(params, function(err, data) {
     console.log(data.Plaintext);
     const cipherKey = data.CiphertextBlob.toString('base64');
     const dataKey = data.Plaintext.toString('utf8');
+    console.log(dataKey);
     const KEY = new Buffer.alloc(32, dataKey, 'utf8');
+    console.log(KEY);
     const IV = new Buffer.alloc(16, '0123456789abcdef', 'utf8')
     const aesCipher = aes256gcm(KEY, IV);
 
-    //const encrypted = aesCipher.encrypt(Buffer.from('goodbye, cruel world', 'utf8'));
-    //console.log(encrypted); // 'hello, world' encrypted
-
-    //const decrypted = aesCipher.decrypt(encrypted);
-    //console.log(decrypted.toString('utf8')); // 'hello, world'
-
     app.use('/encryptdata', express.json());
+
     app.post('/encryptdata', function (req, res) {
       data = {encKey: cipherKey};
-      for (var attr in req.body) {
+      /*for (var attr in req.body) {
         if (req.body.hasOwnProperty(attr)) {
           data[attr] = aesCipher.encrypt(Buffer.from(req.body[attr], 'utf8'));
         }
-      }
+      }*/
+      data['enc'] = aesCipher.encrypt(Buffer.from(req.body['data'], 'utf8'));
       res.send(JSON.stringify(data));
     });
 
     app.use('/decryptdata', express.json());
+
     app.post('/decryptdata', function (req, res) {
       kms.decrypt({CiphertextBlob: Buffer.from(req.body.encKey, 'base64')}, function(err, data) {
-        data = {};
-        for (var attr in req.body) {
-          if (req.body.hasOwnProperty(attr)) {
-            data[attr] = aesCipher.decrypt(req.body[attr], data.Plaintext);
+        returnData = {};
+        console.log(data.Plaintext);
+        let plainKey = data.Plaintext.toString('utf8');
+        console.log(plainKey);
+        let PLAINKEY = new Buffer.alloc(32, plainKey, 'utf8');
+        console.log(PLAINKEY);
+        console.log(PLAINKEY.toString('base64'));
+        console.log(PLAINKEY.toString('base64').length);
+        /*for (var attr in req.body) {
+          if (req.body.hasOwnProperty(attr) && attr != "encKey") {
+            returnData[attr] = aesCipher.decrypt(req.body[attr], PLAINKEY); // USE PROMISES
           }
-        }
-        res.send(JSON.stringify(data));
+        }*/
+        returnData['data'] = aesCipher.decrypt(req.body['enc'], PLAINKEY);
+        res.send(JSON.stringify(returnData));
       });
     });
 
