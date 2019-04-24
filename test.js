@@ -6,6 +6,16 @@ const express = require('express')
 const app = express();
 const port = 8080;
 
+const jsonProcess = (tree, fn) => {
+  for (var attr in tree) {
+    if (typeof tree[attr] !== 'object') {
+      fn(tree, attr);
+      continue;
+    }
+    jsonProcess(tree[attr], fn);
+  }
+};
+
 app.use('/', express.json());
 
 app.get('/', function(req, res) {
@@ -16,21 +26,12 @@ app.get('/', function(req, res) {
 });
 
 app.post('/', function(req, res) {
-  for (var attr in req.body) {
-    if (typeof req.body[attr] == 'object') {
-      for (var attr2 in req.body[attr]) {
-        //console.log(attr + ": " + JSON.stringify(req.body[attr]));
-        console.log(attr2 + ": " + req.body[attr][attr2]);
-      }
-    }
-    else {
-      console.log(attr + ": " + req.body[attr]);
-    }
-  }
-  returnData = {
-    message: "Hello, World"
-  };
-  res.send(JSON.stringify(returnData));
+  var result = JSON.parse(JSON.stringify(req.body));
+  jsonProcess(result, function(node, attr) {
+    console.log(attr);
+    node[attr] = 'xxxx';
+  });
+  res.send(JSON.stringify(result));
 });
 
 app.listen(port, () => console.log(`Testing Service running on port ${port}.`));
