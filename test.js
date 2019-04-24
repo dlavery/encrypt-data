@@ -18,7 +18,10 @@ app.get('/', function(req, res) {
 app.post('/', function(req, res) {
   for (var attr in req.body) {
     if (typeof req.body[attr] == 'object') {
-      console.log(attr + ": " + JSON.stringify(req.body[attr]));
+      for (var attr2 in req.body[attr]) {
+        //console.log(attr + ": " + JSON.stringify(req.body[attr]));
+        console.log(attr2 + ": " + req.body[attr][attr2]);
+      }
     }
     else {
       console.log(attr + ": " + req.body[attr]);
