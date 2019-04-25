@@ -92,18 +92,18 @@ kms.generateDataKey(params, function(err, data) {
     app.post('/decryptdata', function(req, res) {
       var result = JSON.parse(JSON.stringify(req.body));
       var promises = [];
-      jsonProcess(result, function(node, attr) {
+      const fn = (node, attr) => {
         if (typeof node[attr] !== 'string') {
           return;
         }
         const decryptKey = node[attr].substring(0,247);
         const encryptedData = node[attr].substring(248);
         var deferred = Q.defer();
-        promises.push(deferred.promise);
         kms.decrypt({ CiphertextBlob: Buffer.from(decryptKey, 'base64') }, function(err, data) {
           if (err) {
             console.log(err, err.stack); // an error occurred
             res.status(500).end();
+            deferred.reject(err);
           }
           else {
             try {
@@ -121,9 +121,13 @@ kms.generateDataKey(params, function(err, data) {
             }
           }
         });
+        promises.push(deferred.promise);
+      };
+      jsonProcess(result, fn);
+      var allPromise = Q.all(promises);
+      allPromise.then(function(val) {
+        res.send(JSON.stringify(result));
       });
-      var allPromise = Q.allSettled(promises);
-      allPromise.then(console.log('********* then'));
     });
 
     app.listen(port, () => console.log(`Encryption Service running on port ${port}.`));
