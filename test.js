@@ -52,6 +52,9 @@ client.getSecretValue({SecretId: "encrypt-data-service"}, function(err, data) {
     }
     console.log(JSON.stringify(data));
     // Your code goes here.
+    var secrets = JSON.parse(data.SecretString);
+    console.log(secrets['cmk-id']);
+    console.log(secrets['iv']);
 });
 
 const jsonProcess = (tree, fn) => {
